@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		AE9D31F92ED2A6D800B14B3D /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE9D31F82ED2A6D800B14B3D /* AVKit.framework */; };
+		AE9D31FB2ED2A6EA00B14B3D /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE9D31FA2ED2A6EA00B14B3D /* MediaPlayer.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXCopyFilesBuildPhase section */
-		AE80FCBA2ED140C500DE3721 /* CopyFiles */ = {
+		AE920BBA2ED1423B00597D11 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = /usr/share/man/man1/;
@@ -19,11 +24,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		AE80FCBC2ED140C500DE3721 /* PodBot */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PodBot; sourceTree = BUILT_PRODUCTS_DIR; };
+		AE920BBC2ED1423B00597D11 /* PodBot */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PodBot; sourceTree = BUILT_PRODUCTS_DIR; };
+		AE9D31F82ED2A6D800B14B3D /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
+		AE9D31FA2ED2A6EA00B14B3D /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		AE80FCBE2ED140C500DE3721 /* PodBot */ = {
+		AE920BBE2ED1423B00597D11 /* PodBot */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = PodBot;
 			sourceTree = "<group>";
@@ -31,93 +38,105 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		AE80FCB92ED140C500DE3721 /* Frameworks */ = {
+		AE920BB92ED1423B00597D11 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AE9D31FB2ED2A6EA00B14B3D /* MediaPlayer.framework in Frameworks */,
+				AE9D31F92ED2A6D800B14B3D /* AVKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		AE80FCB32ED140C500DE3721 = {
+		AE920BB32ED1423B00597D11 = {
 			isa = PBXGroup;
 			children = (
-				AE80FCBE2ED140C500DE3721 /* PodBot */,
-				AE80FCBD2ED140C500DE3721 /* Products */,
+				AE920BBE2ED1423B00597D11 /* PodBot */,
+				AE9D31F72ED2A6D800B14B3D /* Frameworks */,
+				AE920BBD2ED1423B00597D11 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		AE80FCBD2ED140C500DE3721 /* Products */ = {
+		AE920BBD2ED1423B00597D11 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				AE80FCBC2ED140C500DE3721 /* PodBot */,
+				AE920BBC2ED1423B00597D11 /* PodBot */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		AE9D31F72ED2A6D800B14B3D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				AE9D31FA2ED2A6EA00B14B3D /* MediaPlayer.framework */,
+				AE9D31F82ED2A6D800B14B3D /* AVKit.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		AE80FCBB2ED140C500DE3721 /* PodBot */ = {
+		AE920BBB2ED1423B00597D11 /* PodBot */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AE80FCC32ED140C500DE3721 /* Build configuration list for PBXNativeTarget "PodBot" */;
+			buildConfigurationList = AE920BC32ED1423B00597D11 /* Build configuration list for PBXNativeTarget "PodBot" */;
 			buildPhases = (
-				AE80FCB82ED140C500DE3721 /* Sources */,
-				AE80FCB92ED140C500DE3721 /* Frameworks */,
-				AE80FCBA2ED140C500DE3721 /* CopyFiles */,
+				AE920BB82ED1423B00597D11 /* Sources */,
+				AE920BB92ED1423B00597D11 /* Frameworks */,
+				AE920BBA2ED1423B00597D11 /* CopyFiles */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				AE80FCBE2ED140C500DE3721 /* PodBot */,
+				AE920BBE2ED1423B00597D11 /* PodBot */,
 			);
 			name = PodBot;
 			packageProductDependencies = (
 			);
 			productName = PodBot;
-			productReference = AE80FCBC2ED140C500DE3721 /* PodBot */;
+			productReference = AE920BBC2ED1423B00597D11 /* PodBot */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		AE80FCB42ED140C500DE3721 /* Project object */ = {
+		AE920BB42ED1423B00597D11 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2610;
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
-					AE80FCBB2ED140C500DE3721 = {
+					AE920BBB2ED1423B00597D11 = {
 						CreatedOnToolsVersion = 26.1;
 					};
 				};
 			};
-			buildConfigurationList = AE80FCB72ED140C500DE3721 /* Build configuration list for PBXProject "PodBot" */;
+			buildConfigurationList = AE920BB72ED1423B00597D11 /* Build configuration list for PBXProject "PodBot" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = AE80FCB32ED140C500DE3721;
+			mainGroup = AE920BB32ED1423B00597D11;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = AE80FCBD2ED140C500DE3721 /* Products */;
+			productRefGroup = AE920BBD2ED1423B00597D11 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				AE80FCBB2ED140C500DE3721 /* PodBot */,
+				AE920BBB2ED1423B00597D11 /* PodBot */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
-		AE80FCB82ED140C500DE3721 /* Sources */ = {
+		AE920BB82ED1423B00597D11 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -127,7 +146,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		AE80FCC12ED140C500DE3721 /* Debug */ = {
+		AE920BC12ED1423B00597D11 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -191,7 +210,7 @@
 			};
 			name = Debug;
 		};
-		AE80FCC22ED140C500DE3721 /* Release */ = {
+		AE920BC22ED1423B00597D11 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -247,26 +266,32 @@
 			};
 			name = Release;
 		};
-		AE80FCC42ED140C500DE3721 /* Debug */ = {
+		AE920BC42ED1423B00597D11 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = ZYF5X8SV2F;
 				ENABLE_HARDENED_RUNTIME = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "Shy-Frog.PodBot";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
-		AE80FCC52ED140C500DE3721 /* Release */ = {
+		AE920BC52ED1423B00597D11 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = ZYF5X8SV2F;
 				ENABLE_HARDENED_RUNTIME = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "Shy-Frog.PodBot";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
@@ -276,25 +301,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		AE80FCB72ED140C500DE3721 /* Build configuration list for PBXProject "PodBot" */ = {
+		AE920BB72ED1423B00597D11 /* Build configuration list for PBXProject "PodBot" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				AE80FCC12ED140C500DE3721 /* Debug */,
-				AE80FCC22ED140C500DE3721 /* Release */,
+				AE920BC12ED1423B00597D11 /* Debug */,
+				AE920BC22ED1423B00597D11 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		AE80FCC32ED140C500DE3721 /* Build configuration list for PBXNativeTarget "PodBot" */ = {
+		AE920BC32ED1423B00597D11 /* Build configuration list for PBXNativeTarget "PodBot" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				AE80FCC42ED140C500DE3721 /* Debug */,
-				AE80FCC52ED140C500DE3721 /* Release */,
+				AE920BC42ED1423B00597D11 /* Debug */,
+				AE920BC52ED1423B00597D11 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = AE80FCB42ED140C500DE3721 /* Project object */;
+	rootObject = AE920BB42ED1423B00597D11 /* Project object */;
 }
