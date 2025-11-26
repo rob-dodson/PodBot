@@ -32,7 +32,6 @@ class PlayerDelegate: NSObject, AVAudioPlayerDelegate
 
 private func runREPL()
 {
-   // DispatchQueue.global(qos: .userInitiated).async
     Task
     {
         while true
@@ -64,7 +63,7 @@ private func topMenu() -> [String]
 {
     return [
         "s) search for podcasts",
-        "p) play episode \(currentFeed?.title ?? "")",
+        "e) pick episode to play: \(currentFeed?.title ?? "")",
         "x) exit"
     ]
 }
@@ -81,11 +80,23 @@ private func handleCommand(_ line: String) async
     switch input
     {
         case "p":
+            player?.pause()
+            
+        case "r":
+            player?.play()
+            
+        case "e":
             await pickEpisode()
             
         case "s":
             await search()
+        
+        case "ff":
+            fastforward()
             
+        case "rr":
+            rewind()
+        
         case "x", "exit":
             print("Goodbye.")
             exit(0)
@@ -94,6 +105,8 @@ private func handleCommand(_ line: String) async
             print("Unknown command: \(input). Type ? for help.")
     }
 }
+
+
 
 private func printPrompt()
 {
@@ -127,11 +140,8 @@ private func fetchFeed(from urlString: String) async -> PodcastFeed?
         return nil
     }
     
-    var parsedFeed: PodcastFeed?
-    
     do
     {
-        
         let (data, response) = try await URLSession.shared.data(from: url)
         
         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode)
@@ -150,14 +160,7 @@ private func fetchFeed(from urlString: String) async -> PodcastFeed?
         let parser = PodcastXMLParser()
         if let feed = parser.parse(data: data)
         {
-            // Parsing succeeded; side-effects (like storing in currentFeed) handled elsewhere
             return feed
-        }
-        
-        // If XML parsing failed, print raw for debugging
-        if let raw = String(data: data, encoding: .utf8)
-        {
-            print("Failed to parse XML feed. Raw response (UTF-8):\n\(raw)")
         }
         else
         {
@@ -173,20 +176,48 @@ private func fetchFeed(from urlString: String) async -> PodcastFeed?
 }
 
 
+private func searchMenu() -> [String]
+{
+    return [
+         "x) exit"
+    ]
+}
+
+private func playingMenu() -> [String]
+{
+    return [
+        "p) pause",
+        "r) resume",
+        "ff) fastforward 30",
+        "rr) rewind 15",
+        "m) mark as played",
+        "x) exit"
+    ]
+}
+
 private func search() async
 {
-    FileHandle.standardOutput.write(Data("Search> ".utf8))
-    let line = readLine(strippingNewline: true) ?? ""
-    let query = line.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !query.isEmpty else
+    var query : String?
+    
+    while true
     {
-        print("Please enter a search term.")
-        return
+        let cmd = showMenuAndReturnUserCommand(lines: searchMenu(), prompt: "search> ")
+        if cmd.lowercased() == "x" { return }
+        
+        query = cmd.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query!.isEmpty else
+        {
+            print("Please enter a search term.")
+            continue
+        }
+        break;
     }
-    print("Searching for podcasts containing: \(query)")
+    
+    
+    print("Searching for podcasts containing: \(query ?? "error")")
 
-    let searchterm = query.replacingOccurrences(of: " ", with: "+")
-    let search_url = "https://itunes.apple.com/search?term=\(searchterm)&entity=podcast&limit=10"
+    let searchterm = query?.replacingOccurrences(of: " ", with: "+")
+    let search_url = "https://itunes.apple.com/search?term=\(searchterm ?? "term")&entity=podcast&limit=10"
     print("search_url: \(search_url)")
 
     guard let url = URL(string: search_url) else
@@ -274,14 +305,9 @@ func savePodcast(podcast: Podcast) throws
     
     if let podcastname = podcast.collectionName
     {
-        if let fileURL = URL(string:"file:///\(Utils.getPodDir())/\(podcastname).json")
-        {
-            try data.write(to: fileURL, options: .atomic)
-        }
-        else
-        {
-            print("Error bad fileURL")
-        }
+        let dirURL = URL(fileURLWithPath: "/\(Utils.getPodDir())", isDirectory: true)
+        let fileURL = dirURL.appendingPathComponent("\(podcastname).json")
+        try data.write(to: fileURL, options: .atomic)
     }
     else
     {
@@ -322,7 +348,6 @@ private func pickEpisode() async
     
     for (idx, item) in feed.episodes.enumerated()
     {
-        
         print("\(idx + 1). \(item.title ?? "title") \(item.pubDate ?? "date")")
         if (idx >= 10) { break; }
     }
@@ -336,7 +361,8 @@ private func pickEpisode() async
         episodeNum = num - 1
     }
     
-    if let audiourl = feed.episodes[episodeNum].audioURL
+    var episode = feed.episodes[episodeNum]
+    if let audiourl = episode.audioURL
     {
         if let url = URL.init(string:audiourl)
         {
@@ -354,22 +380,18 @@ private func pickEpisode() async
             
             do
             {
-                let mp3 = URL(fileURLWithPath: "/\(Utils.getPodDir())/\(url.lastPathComponent)")
-                player = try AVAudioPlayer(contentsOf: mp3)
-                playerdelegate = PlayerDelegate()
-                player?.delegate = playerdelegate
-                player?.prepareToPlay()
-                player?.play()
-                
-                avtimer = Timer.init(timeInterval: 1.0, repeats: true, block: { timer in
-                    let remaining = player!.duration - player!.currentTime
-                    print("\rtime left: \(Utils.formatTime(remaining))", terminator: "")
-                    fflush(stdout)
-                })
-                
+                try play(episode: episode)
+                episode.state = .Playing
+                Task{
+                    while true
+                    {
+                        let cmd = showMenuAndReturnUserCommand(lines: playingMenu(), prompt: "> ")
+                        if cmd.lowercased() == "x" { return }
+                        await handleCommand(cmd)
+                    }
+                }
                 RunLoop.main.add(avtimer!, forMode: .default)
-                
-               // RunLoop.main.run()
+
             }
             catch
             {
@@ -380,46 +402,48 @@ private func pickEpisode() async
     }
 }
     
-    // Custom HTTP headers sometimes required for Podtrac or Libsyn
-   // let headers = [
-   //     "User-Agent": "PodBot",
- //       "Accept": "*/*"
- //   ]
-    
-    /*
-    let asset = AVURLAsset(url: url, options: [
-        "AVURLAssetHTTPHeaderFieldsKey": headers
-    ])
-    
-    let item = AVPlayerItem(asset: asset)
-    
-    player = AVPlayer(playerItem: item)
-    
-    _ = item.observe(\.status, options: [.new, .initial])
-    { item, _ in
-        switch item.status
-        {
-            case .readyToPlay:
-                print("READY — redirect chain OK")
-            case .failed:
-                print("FAILED:", item.error ?? "unknown error")
-            case .unknown:
-                print("UNKNOWN")
-            @unknown default:
-                print("???")
-        }
-    }
-    
 
-    print("Starting…")
+private func play(episode:Episode) throws
+{
+    if let audiourl = episode.audioURL
+    {
+        let fileName = URL(string: audiourl)?.lastPathComponent ?? audiourl
+        let dirURL = URL(fileURLWithPath: "/\(Utils.getPodDir())", isDirectory: true)
+        let mp3 = dirURL.appendingPathComponent(fileName)
+        
+        player = try AVAudioPlayer(contentsOf: mp3)
+        playerdelegate = PlayerDelegate()
+        player?.delegate = playerdelegate
+        player?.prepareToPlay()
         player?.play()
-        RunLoop.main.run()
+        
+        avtimer = Timer.init(timeInterval: 1.0, repeats: true, block:
+        { timer in
+            guard let player = player else { return }
+            let remaining = player.duration - player.currentTime
+            print("\u{001B}[A\rtime left: \(Utils.formatTime(remaining))\n>", terminator: "")
+            fflush(stdout)
+        })
+    }
+}
+
+private func fastforward()
+{
+    let skipForwardSeconds: TimeInterval = 30
     
-    */
+    if let player = player {
+        let newTime = player.currentTime + skipForwardSeconds
+        player.currentTime = min(newTime, player.duration) // clamp to end
+    }
+}
 
 
-
-
-
-
-
+private func rewind()
+{
+    let rewindSeconds: TimeInterval = 15
+    
+    if let player = player {
+        let newTime = player.currentTime - rewindSeconds
+        player.currentTime = max(newTime, 0) // clamp to beginning
+    }
+}

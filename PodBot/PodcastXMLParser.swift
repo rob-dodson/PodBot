@@ -72,7 +72,7 @@ class PodcastXMLParser: NSObject, XMLParserDelegate
             case "pubdate", "updated", "published":
                 if !value.isEmpty { currentItemPubDate = (currentItemPubDate ?? "") + value }
             case "item", "entry":
-                let item = Episode(title: currentItemTitle, link: currentItemLink, pubDate: currentItemPubDate, audioURL: currentItemAudioURL)
+                    let item = Episode(title: currentItemTitle, link: currentItemLink, pubDate: currentItemPubDate, audioURL: currentItemAudioURL,currentPosition: 0,state: .NotPlayed)
                 items.append(item)
                 inItem = false
             default:

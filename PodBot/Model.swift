@@ -6,11 +6,12 @@
 //
 import Foundation
 
-struct Podcast: Decodable,Encodable
+struct Podcast: Codable
 {
     let collectionName: String?
     let artistName: String?
     let feedUrl: String?
+    let currentEpsiode: Episode?
 }
 
 struct ITunesSearchResponse: Decodable
@@ -19,12 +20,21 @@ struct ITunesSearchResponse: Decodable
     let results: [Podcast]
 }
 
-struct Episode: Decodable
+enum EpisodeState: String, Codable {
+    case Played
+    case NotPlayed
+    case Playing
+    case Paused
+}
+
+struct Episode: Codable
 {
     let title: String?
     let link: String?
     let pubDate: String?
     let audioURL: String?
+    let currentPosition: Int?
+    var state: EpisodeState
 }
 
 struct PodcastFeed: Decodable
