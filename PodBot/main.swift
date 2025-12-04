@@ -71,13 +71,15 @@ private func topMenu() -> [String]
 
 private func handleCommand(_ line: String) async
 {
-    let input = line.trimmingCharacters(in: .whitespacesAndNewlines)
+    let input = line.trimmingCharacters(in: .newlines)
     if input.isEmpty
     {
         return
     }
+    let parts = input.split(separator: " ")
+    let cmd = parts[0];
     
-    switch input
+    switch cmd
     {
         case "p":
             player?.pause()
@@ -96,6 +98,9 @@ private func handleCommand(_ line: String) async
             
         case "rr":
             rewind()
+            
+        case "j":
+            jump(totime: String(parts[1]))
         
         case "x", "exit":
             print("Goodbye.")
@@ -131,6 +136,7 @@ private func readInput() -> String
     return line
     
 }
+
 
 private func fetchFeed(from urlString: String) async -> PodcastFeed?
 {
@@ -190,6 +196,7 @@ private func playingMenu() -> [String]
         "r) resume",
         "ff) fastforward 30",
         "rr) rewind 15",
+        "j) jump to time <hh:mm:ss>",
         "m) mark as played",
         "x) exit"
     ]
@@ -226,7 +233,8 @@ private func search() async
         return
     }
 
-    do {
+    do
+    {
         let (data, response) = try await URLSession.shared.data(from: url)
         
         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode)
@@ -253,9 +261,9 @@ private func search() async
                 print("\nTop \(decoded.results.count) results:")
                 for (idx, item) in decoded.results.enumerated()
                 {
-                    let title = item.collectionName ?? "<No Title>"
-                    let author = item.artistName ?? "<Unknown Author>"
-                    let feed = item.feedUrl ?? "<No Feed URL>"
+                    let title = item.collectionName
+                    let author = item.artistName
+                    let feed = item.feedUrl
                     print("\(idx + 1). \(title) — \(author)\n   Feed: \(feed)")
                 }
 
@@ -303,45 +311,37 @@ func savePodcast(podcast: Podcast) throws
     encoder.outputFormatting = .prettyPrinted
     let data = try encoder.encode(podcast)
     
-    if let podcastname = podcast.collectionName
-    {
+    let podcastname = podcast.collectionName
         let dirURL = URL(fileURLWithPath: "/\(Utils.getPodDir())", isDirectory: true)
         let fileURL = dirURL.appendingPathComponent("\(podcastname).json")
         try data.write(to: fileURL, options: .atomic)
-    }
-    else
-    {
-        print("Error bad podcast name")
-    }
 }
-
-
 
 
 private func loadPodcast(podcast:Podcast) async
 {
-    if let feedURL = podcast.feedUrl
-    {
-        let feed = await fetchFeed(from: feedURL)
-        currentFeed = feed
-        print("feed \(String(describing: feed?.title))")
-    }
-    else
-    {
-        print("No CurrentFeedURL set. Perform a search first and choose a result.")
-    }
+    let feedURL = podcast.feedUrl
+    let feed = await fetchFeed(from: feedURL)
+    currentFeed = feed
+    print("feed \(String(describing: feed?.title))")
 }
 
 
 private func pickEpisode() async
 {
     var feedToUse: PodcastFeed?
-    if let cf = currentFeed {
+    
+    if let cf = currentFeed
+    {
         feedToUse = cf
-    } else if let testfeed = CurrentFeedURL {
+    }
+    else if let testfeed = CurrentFeedURL
+    {
         feedToUse = await fetchFeed(from: testfeed)
     }
-    guard let feed = feedToUse else {
+    
+    guard let feed = feedToUse else
+    {
         print("No feed available. Use 't' to set a test feed or 's' to search first.")
         return
     }
@@ -364,40 +364,40 @@ private func pickEpisode() async
     var episode = feed.episodes[episodeNum]
     if let audiourl = episode.audioURL
     {
-        if let url = URL.init(string:audiourl)
+        do
         {
-            do
+            if let mp3path = Utils.getMP3Path(episode:episode)
             {
-                print("Downloading...")
-                try Utils.downloadMP3(from: url.absoluteString, to: "\(Utils.getPodDir())/\(url.lastPathComponent)")
-                
-            }
-            catch
-            {
-                print("download error \(error)")
-                return
+                print("Downloading \(mp3path)...")
+                try Utils.downloadMP3(from: audiourl, to: mp3path)
             }
             
-            do
-            {
-                try play(episode: episode)
-                episode.state = .Playing
-                Task{
-                    while true
-                    {
-                        let cmd = showMenuAndReturnUserCommand(lines: playingMenu(), prompt: "> ")
-                        if cmd.lowercased() == "x" { return }
-                        await handleCommand(cmd)
-                    }
+        }
+        catch
+        {
+            print("download error \(error)")
+            return
+        }
+        
+        do
+        {
+            try play(episode: episode)
+            episode.state = .Playing
+            Task{
+                while true
+                {
+                    let cmd = showMenuAndReturnUserCommand(lines: playingMenu(), prompt: "> ")
+                    if cmd.lowercased() == "x" { return }
+                    await handleCommand(cmd)
                 }
-                RunLoop.main.add(avtimer!, forMode: .default)
+            }
+            RunLoop.main.add(avtimer!, forMode: .default)
 
-            }
-            catch
-            {
-                print("avaudioplayer error \(error)")
-                return
-            }
+        }
+        catch
+        {
+            print("avaudioplayer error \(error)")
+            return
         }
     }
 }
@@ -405,13 +405,10 @@ private func pickEpisode() async
 
 private func play(episode:Episode) throws
 {
-    if let audiourl = episode.audioURL
+    if let mp3path = Utils.getMP3Path(episode: episode)
     {
-        let fileName = URL(string: audiourl)?.lastPathComponent ?? audiourl
-        let dirURL = URL(fileURLWithPath: "/\(Utils.getPodDir())", isDirectory: true)
-        let mp3 = dirURL.appendingPathComponent(fileName)
         
-        player = try AVAudioPlayer(contentsOf: mp3)
+        player = try AVAudioPlayer(contentsOf: URL(string:mp3path)!)
         playerdelegate = PlayerDelegate()
         player?.delegate = playerdelegate
         player?.prepareToPlay()
@@ -421,19 +418,22 @@ private func play(episode:Episode) throws
         { timer in
             guard let player = player else { return }
             let remaining = player.duration - player.currentTime
-            print("\u{001B}[A\rtime left: \(Utils.formatTime(remaining))\n>", terminator: "")
+            let current = player.currentTime
+            print("\u{001B}[A\rtime: \(Utils.formatTime(current)) - \(Utils.formatTime(remaining))\n>", terminator: "")
             fflush(stdout)
         })
     }
 }
 
+
 private func fastforward()
 {
     let skipForwardSeconds: TimeInterval = 30
     
-    if let player = player {
+    if let player = player
+    {
         let newTime = player.currentTime + skipForwardSeconds
-        player.currentTime = min(newTime, player.duration) // clamp to end
+        player.currentTime = min(newTime, player.duration)
     }
 }
 
@@ -442,8 +442,20 @@ private func rewind()
 {
     let rewindSeconds: TimeInterval = 15
     
-    if let player = player {
+    if let player = player
+    {
         let newTime = player.currentTime - rewindSeconds
-        player.currentTime = max(newTime, 0) // clamp to beginning
+        player.currentTime = max(newTime, 0)
     }
 }
+
+
+private func jump(totime:String)
+{
+    if let player = player
+    {
+        let newtime = Utils.timeStringToSeconds(totime)
+        player.currentTime = TimeInterval(newtime)
+    }
+}
+

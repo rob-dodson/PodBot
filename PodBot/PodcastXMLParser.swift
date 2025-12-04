@@ -20,19 +20,30 @@ class PodcastXMLParser: NSObject, XMLParserDelegate
     private var accumulatingString: String = ""
     private var inItem: Bool = false
 
-    func parse(data: Data) -> PodcastFeed? {
+    func parse(data: Data) -> PodcastFeed?
+    {
         let parser = XMLParser(data: data)
         parser.delegate = self
         // RSS feeds can be in various encodings; XMLParser handles that via header.
-        if parser.parse() {
-            return PodcastFeed(title: feedTitle, description: feedDescription, episodes: items)
-        } else {
+        if parser.parse()
+        {
+            var feed = PodcastFeed(title: feedTitle ?? "title", description: feedDescription ?? "desc", episodes: items)
+            for (index,_) in feed.episodes.enumerated()
+            {
+                feed.episodes[index].parent = feed;
+            }
+            
+            return feed
+        }
+        else
+        {
             return nil
         }
     }
 
     // MARK: - XMLParserDelegate
-    func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:]) {
+    func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:])
+    {
         currentElement = elementName.lowercased()
         accumulatingString = ""
         if currentElement == "item" || currentElement == "entry" { // RSS item or Atom entry
@@ -60,7 +71,8 @@ class PodcastXMLParser: NSObject, XMLParserDelegate
         accumulatingString += string
     }
 
-    func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
+    func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?)
+    {
         let value = accumulatingString.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = elementName.lowercased()
         if inItem {
@@ -72,7 +84,7 @@ class PodcastXMLParser: NSObject, XMLParserDelegate
             case "pubdate", "updated", "published":
                 if !value.isEmpty { currentItemPubDate = (currentItemPubDate ?? "") + value }
             case "item", "entry":
-                    let item = Episode(title: currentItemTitle, link: currentItemLink, pubDate: currentItemPubDate, audioURL: currentItemAudioURL,currentPosition: 0,state: .NotPlayed)
+                    let item = Episode(parent: nil, title: currentItemTitle, link: currentItemLink, pubDate: currentItemPubDate, audioURL: currentItemAudioURL,currentPosition: 0,state: .NotPlayed)
                 items.append(item)
                 inItem = false
             default:

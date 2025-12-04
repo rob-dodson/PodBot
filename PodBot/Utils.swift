@@ -36,17 +36,48 @@ class Utils
             return newDir.path
         }
         
-        do {
+        do
+        {
             try fileManager.createDirectory(at: newDir, withIntermediateDirectories: true)
             print("Created directory at: \(newDir.path)")
-        } catch {
+        }
+        catch
+        {
             print("Error creating directory:", error)
         }
         
         return newDir.path
     }
     
+   
+    static func getMP3Path(episode: Episode) -> String?
+    {
+        let subdir = episode.parent?.title.replacingOccurrences(of: " ", with: "_")
+      //  let episodename = episode.title?.replacingOccurrences(of: " ", with: "_")
     
+        let dir = "\(getPodDir())/\(subdir!)"
+        
+        if (!fileExists(at: dir))
+        {
+            if let fileurl = URL(string:"file:///\(dir)")
+            {
+                do
+                {
+                    try FileManager.default.createDirectory(at: fileurl, withIntermediateDirectories: true)
+                }
+                catch
+                {
+                    print("failed to make subdir: \(fileurl.path) \(error)")
+                }
+            }
+        }
+        
+        let mp3url = URL(string:episode.audioURL ?? "title")
+        
+        return getPodDir() + "/\(subdir!)/\(mp3url?.lastPathComponent ?? "media.mp3")"
+    }
+    
+   
     static func downloadMP3(from urlString: String, to destinationPath: String) throws
     {
         // If the file already exists, skip downloading
@@ -107,6 +138,23 @@ class Utils
         }
         
         task.resume()
+    }
+    
+    static func timeStringToSeconds(_ time: String) -> Int
+    {
+        let parts = time.split(separator: ":").map { Int($0) ?? 0 }
+        
+        // Support "HH:MM:SS", "MM:SS", or "SS"
+        switch parts.count {
+            case 3:
+                return parts[0] * 3600 + parts[1] * 60 + parts[2]
+            case 2:
+                return parts[0] * 60 + parts[1]
+            case 1:
+                return parts[0]
+            default:
+                return 0
+        }
     }
 }
 

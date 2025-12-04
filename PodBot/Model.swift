@@ -8,10 +8,16 @@ import Foundation
 
 struct Podcast: Codable
 {
-    let collectionName: String?
-    let artistName: String?
-    let feedUrl: String?
-    let currentEpsiode: Episode?
+    let collectionName: String
+    let artistName: String
+    let feedUrl: String
+
+    init(collectionName: String = "<no name>", artistName: String = "<no artist>", feedUrl: String = "<no url>")
+    {
+        self.collectionName = collectionName
+        self.artistName = artistName
+        self.feedUrl = feedUrl
+    }
 }
 
 struct ITunesSearchResponse: Decodable
@@ -29,6 +35,7 @@ enum EpisodeState: String, Codable {
 
 struct Episode: Codable
 {
+    var parent: PodcastFeed?
     let title: String?
     let link: String?
     let pubDate: String?
@@ -37,9 +44,16 @@ struct Episode: Codable
     var state: EpisodeState
 }
 
-struct PodcastFeed: Decodable
+struct PodcastFeed: Codable
 {
-    let title: String?
-    let description: String?
-    let episodes: [Episode]
+    let title: String
+    let description: String
+    var episodes: [Episode]
+    
+    init(title: String = "<no title>", description: String = "<no description>", episodes: [Episode] = [])
+    {
+        self.title = title
+        self.description = description
+        self.episodes = episodes
+    }
 }
