@@ -49,32 +49,47 @@ class Utils
         return newDir.path
     }
     
-   
-    static func getMP3Path(episode: Episode) -> String?
-    {
-        let subdir = episode.parent?.title.replacingOccurrences(of: " ", with: "_")
-      //  let episodename = episode.title?.replacingOccurrences(of: " ", with: "_")
     
-        let dir = "\(getPodDir())/\(subdir!)"
+    static func getPodcastPath(podcast: PodcastFeed) -> String?
+    {
+        let subdir = podcast.title.replacingOccurrences(of: " ", with: "_")
+        
+        let dir = "\(getPodDir())/\(subdir)"
         
         if (!fileExists(at: dir))
         {
-            if let fileurl = URL(string:"file:///\(dir)")
+            if let dirurl = URL(string:"file:///\(dir)")
             {
                 do
                 {
-                    try FileManager.default.createDirectory(at: fileurl, withIntermediateDirectories: true)
+                    try FileManager.default.createDirectory(at: dirurl, withIntermediateDirectories: true)
                 }
                 catch
                 {
-                    print("failed to make subdir: \(fileurl.path) \(error)")
+                    print("failed to make subdir: \(dirurl.path) \(error)")
                 }
             }
         }
         
-        let mp3url = URL(string:episode.audioURL ?? "title")
-        
-        return getPodDir() + "/\(subdir!)/\(mp3url?.lastPathComponent ?? "media.mp3")"
+        return dir
+    }
+    
+    
+    static func getMP3Path(episode: Episode) -> String?
+    {
+        if (episode.parent == nil)
+        {
+            return nil
+        }
+        else
+        {
+            
+            let subdir = getPodcastPath(podcast:episode.parent!)
+            
+            let mp3url = URL(string:episode.audioURL ?? "title")
+            
+            return "\(subdir!)/\(mp3url?.lastPathComponent ?? "media.mp3")"
+        }
     }
     
    
@@ -145,7 +160,8 @@ class Utils
         let parts = time.split(separator: ":").map { Int($0) ?? 0 }
         
         // Support "HH:MM:SS", "MM:SS", or "SS"
-        switch parts.count {
+        switch parts.count
+        {
             case 3:
                 return parts[0] * 3600 + parts[1] * 60 + parts[2]
             case 2:

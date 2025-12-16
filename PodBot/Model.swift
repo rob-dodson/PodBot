@@ -6,7 +6,7 @@
 //
 import Foundation
 
-struct Podcast: Codable
+struct SearchResult: Codable
 {
     let collectionName: String
     let artistName: String
@@ -23,7 +23,7 @@ struct Podcast: Codable
 struct ITunesSearchResponse: Decodable
 {
     let resultCount: Int
-    let results: [Podcast]
+    let results: [SearchResult]
 }
 
 enum EpisodeState: String, Codable {

@@ -202,6 +202,7 @@ private func playingMenu() -> [String]
     ]
 }
 
+
 private func search() async
 {
     var query : String?
@@ -273,16 +274,9 @@ private func search() async
                 if let num = Int(line)
                 {
                     CurrentFeedURL = decoded.results[num - 1].feedUrl
-                    do
-                    {
-                        let podcast = decoded.results[num - 1]
-                        try savePodcast(podcast: podcast)
-                        await loadPodcast(podcast: podcast)
-                    }
-                    catch
-                    {
-                        print("Error saving podcast to disk: \(error)")
-                    }
+                    let searchresult  = decoded.results[num - 1]
+                    await loadPodcast(feedstr: searchresult.feedUrl)
+                  //  print("feed: \(String(describing: searchresult.collectionName))")
                 }
             }
         }
@@ -299,31 +293,30 @@ private func search() async
             }
         }
     }
-    catch {
+    catch
+    {
         print("Request error: \(error.localizedDescription)")
     }
 }
 
 
-func savePodcast(podcast: Podcast) throws
+func savePodcast(podcast: PodcastFeed) throws
 {
     let encoder = JSONEncoder()
     encoder.outputFormatting = .prettyPrinted
     let data = try encoder.encode(podcast)
     
-    let podcastname = podcast.collectionName
-        let dirURL = URL(fileURLWithPath: "/\(Utils.getPodDir())", isDirectory: true)
-        let fileURL = dirURL.appendingPathComponent("\(podcastname).json")
-        try data.write(to: fileURL, options: .atomic)
+    let podcastname = podcast.title
+    let dirURL = URL(fileURLWithPath: "/\(Utils.getPodcastPath(podcast: podcast) ?? "err")", isDirectory: true)
+    let fileURL = dirURL.appendingPathComponent("\(podcastname).json")
+    try data.write(to: fileURL, options: .atomic)
 }
 
 
-private func loadPodcast(podcast:Podcast) async
+private func loadPodcast(feedstr:String) async
 {
-    let feedURL = podcast.feedUrl
-    let feed = await fetchFeed(from: feedURL)
+    let feed = await fetchFeed(from: feedstr)
     currentFeed = feed
-    print("feed \(String(describing: feed?.title))")
 }
 
 
@@ -345,6 +338,8 @@ private func pickEpisode() async
         print("No feed available. Use 't' to set a test feed or 's' to search first.")
         return
     }
+    
+    print("Episodes for \(feed.title)")
     
     for (idx, item) in feed.episodes.enumerated()
     {
