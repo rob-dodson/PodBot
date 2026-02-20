@@ -633,39 +633,70 @@ private func markCurrentEpisodeAsPlayed()
 
     let currentMP3Path = Utils.getMP3Path(episode: episode)
     let bookmarks = loadSavedBookmarks()
-    let filtered = bookmarks.filter
+    let matchesCurrentEpisode: (SavedEpisodeBookmark) -> Bool =
     {
-        if let currentMP3Path = currentMP3Path, $0.mp3Path == currentMP3Path
+        bookmark in
+        if let currentMP3Path = currentMP3Path, bookmark.mp3Path == currentMP3Path
         {
-            return false
+            return true
         }
 
-        if let audioURL = episode.audioURL, $0.audioURL == audioURL
+        if let audioURL = episode.audioURL, bookmark.audioURL == audioURL
         {
-            return false
+            return true
         }
 
-        if $0.episodeTitle == (episode.title ?? "<unknown episode>") &&
-            $0.feedTitle == (episode.parent?.name ?? "<unknown feed>")
+        if bookmark.episodeTitle == (episode.title ?? "<unknown episode>") &&
+            bookmark.feedTitle == (episode.parent?.name ?? "<unknown feed>")
         {
-            return false
+            return true
         }
 
-        return true
+        return false
     }
+    let filtered = bookmarks.filter { !matchesCurrentEpisode($0) }
+    let removedBookmarks = bookmarks.filter { matchesCurrentEpisode($0) }
 
     if filtered.count == bookmarks.count
     {
         print("No saved entry found for current episode.")
-        autosaveDisabledForCurrentEpisode = true
-        stopPlayback()
-        return
+    }
+    else
+    {
+        writeSavedBookmarks(filtered)
     }
 
-    writeSavedBookmarks(filtered)
     autosaveDisabledForCurrentEpisode = true
     stopPlayback()
-    print("Marked as played, removed from saved episodes, and stopped playback.")
+
+    var candidatePaths = Set<String>()
+    if let currentMP3Path = currentMP3Path
+    {
+        candidatePaths.insert(currentMP3Path)
+    }
+    for removed in removedBookmarks
+    {
+        candidatePaths.insert(removed.mp3Path)
+    }
+
+    var deletedCount = 0
+    for path in candidatePaths
+    {
+        if Utils.fileExists(at: path)
+        {
+            do
+            {
+                try FileManager.default.removeItem(atPath: path)
+                deletedCount += 1
+            }
+            catch
+            {
+                print("Failed to delete audio file at \(path): \(error)")
+            }
+        }
+    }
+
+    print("Marked as played, removed from saved episodes, and deleted \(deletedCount) downloaded file(s).")
 }
 
 
