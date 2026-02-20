@@ -41,6 +41,9 @@ class PlayerDelegate: NSObject, AVAudioPlayerDelegate
 {
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool)
     {
+        avtimer?.invalidate()
+        avtimer = nil
+        currentEpisode = nil
         print("Playback finished. Success: \(flag)")
     }
 }
@@ -410,15 +413,8 @@ private func pickEpisode() async
             autosaveDisabledForCurrentEpisode = false
             try play(episode: episode, startAt: 0)
             episode.state = .Playing
-            Task{
-                while true
-                {
-                    let cmd = showMenuAndReturnUserCommand(lines: playingMenu(), prompt: "> ")
-                    if cmd.lowercased() == "x" { return }
-                    await handleCommand(cmd)
-                }
-            }
             RunLoop.main.add(avtimer!, forMode: .default)
+            await runPlaybackLoop()
 
         }
         catch
@@ -426,6 +422,31 @@ private func pickEpisode() async
             print("avaudioplayer error \(error)")
             return
         }
+    }
+}
+
+
+private func stopPlayback()
+{
+    player?.stop()
+    avtimer?.invalidate()
+    avtimer = nil
+    player = nil
+    currentEpisode = nil
+}
+
+
+private func runPlaybackLoop() async
+{
+    while currentEpisode != nil
+    {
+        let cmd = showMenuAndReturnUserCommand(lines: playingMenu(), prompt: "> ")
+        if cmd.lowercased() == "x"
+        {
+            stopPlayback()
+            return
+        }
+        await handleCommand(cmd)
     }
 }
     
@@ -637,21 +658,13 @@ private func markCurrentEpisodeAsPlayed()
     {
         print("No saved entry found for current episode.")
         autosaveDisabledForCurrentEpisode = true
-        player?.stop()
-        avtimer?.invalidate()
-        avtimer = nil
-        player = nil
-        currentEpisode = nil
+        stopPlayback()
         return
     }
 
     writeSavedBookmarks(filtered)
     autosaveDisabledForCurrentEpisode = true
-    player?.stop()
-    avtimer?.invalidate()
-    avtimer = nil
-    player = nil
-    currentEpisode = nil
+    stopPlayback()
     print("Marked as played, removed from saved episodes, and stopped playback.")
 }
 
@@ -725,16 +738,7 @@ private func resumeSavedEpisode() async
 
         RunLoop.main.add(avtimer!, forMode: .default)
         print("Resumed \(bookmark.episodeTitle) at \(Utils.formatTime(bookmark.savedPosition)).")
-
-        Task
-        {
-            while true
-            {
-                let cmd = showMenuAndReturnUserCommand(lines: playingMenu(), prompt: "> ")
-                if cmd.lowercased() == "x" { return }
-                await handleCommand(cmd)
-            }
-        }
+        await runPlaybackLoop()
     }
     catch
     {
