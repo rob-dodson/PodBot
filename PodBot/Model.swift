@@ -6,7 +6,14 @@
 //
 import Foundation
 
-struct SearchResult: Codable
+
+struct ITunesSearchResponse: Decodable
+{
+    let resultCount: Int
+    let results: [RSSSearchResult]
+}
+
+struct RSSSearchResult: Codable
 {
     let collectionName: String
     let artistName: String
@@ -20,31 +27,7 @@ struct SearchResult: Codable
     }
 }
 
-struct ITunesSearchResponse: Decodable
-{
-    let resultCount: Int
-    let results: [SearchResult]
-}
-
-enum EpisodeState: String, Codable {
-    case Played
-    case NotPlayed
-    case Playing
-    case Paused
-}
-
-struct Episode: Codable
-{
-    var parent: PodcastFeed?
-    let title: String?
-    let link: String?
-    let pubDate: String?
-    let audioURL: String?
-    let currentPosition: Int?
-    var state: EpisodeState
-}
-
-struct PodcastFeed: Codable
+struct PodcastRSSFeed: Codable
 {
     let title: String
     let description: String
@@ -57,3 +40,33 @@ struct PodcastFeed: Codable
         self.episodes = episodes
     }
 }
+
+typealias PodcastFeed = PodcastRSSFeed
+
+enum EpisodeState: String, Codable
+{
+    case Played
+    case NotPlayed
+    case Playing
+    case Paused
+}
+
+struct Podcast : Codable
+{
+    let name: String
+    let feedURL: String
+    let currentEpisodeNum: Int
+}
+
+struct Episode: Codable
+{
+    var parent: Podcast?
+    let title: String?
+    let link: String?
+    let pubDate: String?
+    let audioURL: String?
+    let currentPosition: Int?
+    var state: EpisodeState
+}
+
+

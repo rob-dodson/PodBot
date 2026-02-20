@@ -28,9 +28,10 @@ class PodcastXMLParser: NSObject, XMLParserDelegate
         if parser.parse()
         {
             var feed = PodcastFeed(title: feedTitle ?? "title", description: feedDescription ?? "desc", episodes: items)
+            let parentPodcast = Podcast(name: feed.title, feedURL: "", currentEpisodeNum: 0)
             for (index,_) in feed.episodes.enumerated()
             {
-                feed.episodes[index].parent = feed;
+                feed.episodes[index].parent = parentPodcast
             }
             
             return feed

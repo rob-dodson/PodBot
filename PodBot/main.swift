@@ -15,7 +15,23 @@ var playerdelegate : PlayerDelegate?
 var avtimer : Timer?
 
 var player: AVAudioPlayer?
+var currentEpisode: Episode?
+var lastAutoSavedSecond: Int = -1
+var autosaveDisabledForCurrentEpisode: Bool = false
 var VERSION = "0.1"
+
+struct SavedEpisodeBookmark: Codable
+{
+    let feedTitle: String
+    let episodeTitle: String
+    let pubDate: String?
+    let audioURL: String?
+    let mp3Path: String
+    var savedPosition: TimeInterval
+    var savedAt: Date
+}
+
+private let savedEpisodesFileName = "saved_episodes.json"
 
 
 printGreeting()
@@ -64,6 +80,7 @@ private func topMenu() -> [String]
     return [
         "s) search for podcasts",
         "e) pick episode to play: \(currentFeed?.title ?? "")",
+        "l) list saved episodes",
         "x) exit"
     ]
 }
@@ -89,6 +106,9 @@ private func handleCommand(_ line: String) async
             
         case "e":
             await pickEpisode()
+
+        case "l":
+            await resumeSavedEpisode()
             
         case "s":
             await search()
@@ -100,7 +120,17 @@ private func handleCommand(_ line: String) async
             rewind()
             
         case "j":
-            jump(totime: String(parts[1]))
+            if parts.count < 2
+            {
+                print("Usage: j <hh:mm:ss>")
+            }
+            else
+            {
+                jump(totime: String(parts[1]))
+            }
+
+        case "m":
+            markCurrentEpisodeAsPlayed()
         
         case "x", "exit":
             print("Goodbye.")
@@ -309,7 +339,7 @@ func savePodcast(podcast: PodcastFeed) throws
     let podcastname = podcast.title
     let dirURL = URL(fileURLWithPath: "/\(Utils.getPodcastPath(podcast: podcast) ?? "err")", isDirectory: true)
     let fileURL = dirURL.appendingPathComponent("\(podcastname).json")
-    try data.write(to: fileURL, options: .atomic)
+    try data.write(to: fileURL, options: Data.WritingOptions.atomic)
 }
 
 
@@ -376,7 +406,9 @@ private func pickEpisode() async
         
         do
         {
-            try play(episode: episode)
+            currentEpisode = episode
+            autosaveDisabledForCurrentEpisode = false
+            try play(episode: episode, startAt: 0)
             episode.state = .Playing
             Task{
                 while true
@@ -400,24 +432,43 @@ private func pickEpisode() async
 
 private func play(episode:Episode) throws
 {
+    try play(episode: episode, startAt: 0)
+}
+
+
+private func play(episode:Episode, startAt: TimeInterval) throws
+{
     if let mp3path = Utils.getMP3Path(episode: episode)
     {
-        
-        player = try AVAudioPlayer(contentsOf: URL(string:mp3path)!)
+        player = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: mp3path))
         playerdelegate = PlayerDelegate()
         player?.delegate = playerdelegate
         player?.prepareToPlay()
+        player?.currentTime = max(0, min(startAt, player?.duration ?? startAt))
         player?.play()
-        
-        avtimer = Timer.init(timeInterval: 1.0, repeats: true, block:
-        { timer in
-            guard let player = player else { return }
-            let remaining = player.duration - player.currentTime
-            let current = player.currentTime
-            print("\u{001B}[A\rtime: \(Utils.formatTime(current)) - \(Utils.formatTime(remaining))\n>", terminator: "")
-            fflush(stdout)
-        })
+        startPlaybackTimer()
     }
+}
+
+
+private func startPlaybackTimer()
+{
+    lastAutoSavedSecond = -1
+    avtimer = Timer.init(timeInterval: 1.0, repeats: true, block:
+    { timer in
+        guard let player = player else { return }
+        let remaining = player.duration - player.currentTime
+        let current = player.currentTime
+        print("\u{001B}[A\rtime: \(Utils.formatTime(current)) - \(Utils.formatTime(remaining))\n>", terminator: "")
+        fflush(stdout)
+
+        let currentSecond = Int(current)
+        if currentSecond > 0 && currentSecond % 5 == 0 && currentSecond != lastAutoSavedSecond
+        {
+            lastAutoSavedSecond = currentSecond
+            saveCurrentPlaybackPosition(silent: true)
+        }
+    })
 }
 
 
@@ -454,3 +505,239 @@ private func jump(totime:String)
     }
 }
 
+
+private func savedEpisodesFilePath() -> String
+{
+    return "\(Utils.getPodDir())/\(savedEpisodesFileName)"
+}
+
+
+private func loadSavedBookmarks() -> [SavedEpisodeBookmark]
+{
+    let path = savedEpisodesFilePath()
+    guard Utils.fileExists(at: path) else
+    {
+        return []
+    }
+
+    do
+    {
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        return try JSONDecoder().decode([SavedEpisodeBookmark].self, from: data)
+    }
+    catch
+    {
+        print("Failed to load saved episodes: \(error)")
+        return []
+    }
+}
+
+
+private func writeSavedBookmarks(_ bookmarks: [SavedEpisodeBookmark])
+{
+    do
+    {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        let data = try encoder.encode(bookmarks)
+        try data.write(to: URL(fileURLWithPath: savedEpisodesFilePath()), options: .atomic)
+    }
+    catch
+    {
+        print("Failed to save episodes: \(error)")
+    }
+}
+
+
+private func saveCurrentPlaybackPosition(silent: Bool = false)
+{
+    if autosaveDisabledForCurrentEpisode
+    {
+        return
+    }
+
+    guard let player = player, let episode = currentEpisode else
+    {
+        if !silent
+        {
+            print("Nothing is currently playing.")
+        }
+        return
+    }
+
+    guard let mp3Path = Utils.getMP3Path(episode: episode) else
+    {
+        if !silent
+        {
+            print("Could not determine episode file path.")
+        }
+        return
+    }
+
+    var bookmarks = loadSavedBookmarks()
+    let newBookmark = SavedEpisodeBookmark(
+        feedTitle: episode.parent?.name ?? "<unknown feed>",
+        episodeTitle: episode.title ?? "<unknown episode>",
+        pubDate: episode.pubDate,
+        audioURL: episode.audioURL,
+        mp3Path: mp3Path,
+        savedPosition: player.currentTime,
+        savedAt: Date()
+    )
+
+    if let existingIndex = bookmarks.firstIndex(where: { $0.mp3Path == mp3Path })
+    {
+        bookmarks[existingIndex] = newBookmark
+    }
+    else
+    {
+        bookmarks.append(newBookmark)
+    }
+
+    writeSavedBookmarks(bookmarks)
+    if !silent
+    {
+        print("Saved \(newBookmark.episodeTitle) at \(Utils.formatTime(newBookmark.savedPosition)).")
+    }
+}
+
+
+private func markCurrentEpisodeAsPlayed()
+{
+    guard let episode = currentEpisode else
+    {
+        print("Nothing is currently playing.")
+        return
+    }
+
+    let currentMP3Path = Utils.getMP3Path(episode: episode)
+    let bookmarks = loadSavedBookmarks()
+    let filtered = bookmarks.filter
+    {
+        if let currentMP3Path = currentMP3Path, $0.mp3Path == currentMP3Path
+        {
+            return false
+        }
+
+        if let audioURL = episode.audioURL, $0.audioURL == audioURL
+        {
+            return false
+        }
+
+        if $0.episodeTitle == (episode.title ?? "<unknown episode>") &&
+            $0.feedTitle == (episode.parent?.name ?? "<unknown feed>")
+        {
+            return false
+        }
+
+        return true
+    }
+
+    if filtered.count == bookmarks.count
+    {
+        print("No saved entry found for current episode.")
+        autosaveDisabledForCurrentEpisode = true
+        player?.stop()
+        avtimer?.invalidate()
+        avtimer = nil
+        player = nil
+        currentEpisode = nil
+        return
+    }
+
+    writeSavedBookmarks(filtered)
+    autosaveDisabledForCurrentEpisode = true
+    player?.stop()
+    avtimer?.invalidate()
+    avtimer = nil
+    player = nil
+    currentEpisode = nil
+    print("Marked as played, removed from saved episodes, and stopped playback.")
+}
+
+
+private func resumeSavedEpisode() async
+{
+    let bookmarks = loadSavedBookmarks()
+    if bookmarks.isEmpty
+    {
+        print("No saved episodes yet.")
+        return
+    }
+
+    print("Saved episodes:")
+    for (idx, bookmark) in bookmarks.enumerated()
+    {
+        print("\(idx + 1). \(bookmark.feedTitle) - \(bookmark.episodeTitle) [\(Utils.formatTime(bookmark.savedPosition))]")
+    }
+
+    FileHandle.standardOutput.write(Data("Saved episode number or x to exit> ".utf8))
+    let line = readLine(strippingNewline: true) ?? ""
+    if line.lowercased() == "x" { return }
+
+    guard let selectedNum = Int(line), selectedNum > 0, selectedNum <= bookmarks.count else
+    {
+        print("Invalid selection.")
+        return
+    }
+
+    let bookmark = bookmarks[selectedNum - 1]
+    let filePath = bookmark.mp3Path
+
+    if !Utils.fileExists(at: filePath), let audioURL = bookmark.audioURL
+    {
+        do
+        {
+            try Utils.downloadMP3(from: audioURL, to: filePath)
+        }
+        catch
+        {
+            print("Unable to restore audio file: \(error)")
+            return
+        }
+    }
+
+    if !Utils.fileExists(at: filePath)
+    {
+        print("Audio file not found and no downloadable URL available.")
+        return
+    }
+
+    do
+    {
+        currentEpisode = Episode(
+            parent: Podcast(name: bookmark.feedTitle, feedURL: "", currentEpisodeNum: 0),
+            title: bookmark.episodeTitle,
+            link: nil,
+            pubDate: bookmark.pubDate,
+            audioURL: bookmark.audioURL,
+            currentPosition: nil,
+            state: .Playing
+        )
+        autosaveDisabledForCurrentEpisode = false
+        player = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: filePath))
+        playerdelegate = PlayerDelegate()
+        player?.delegate = playerdelegate
+        player?.prepareToPlay()
+        player?.currentTime = max(0, min(bookmark.savedPosition, player?.duration ?? bookmark.savedPosition))
+        player?.play()
+        startPlaybackTimer()
+
+        RunLoop.main.add(avtimer!, forMode: .default)
+        print("Resumed \(bookmark.episodeTitle) at \(Utils.formatTime(bookmark.savedPosition)).")
+
+        Task
+        {
+            while true
+            {
+                let cmd = showMenuAndReturnUserCommand(lines: playingMenu(), prompt: "> ")
+                if cmd.lowercased() == "x" { return }
+                await handleCommand(cmd)
+            }
+        }
+    }
+    catch
+    {
+        print("avaudioplayer error \(error)")
+    }
+}

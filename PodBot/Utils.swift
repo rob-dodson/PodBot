@@ -83,12 +83,23 @@ class Utils
         }
         else
         {
-            
-            let subdir = getPodcastPath(podcast:episode.parent!)
-            
+            let podcastName = episode.parent!.name.replacingOccurrences(of: " ", with: "_")
+            let subdir = "\(getPodDir())/\(podcastName)"
+            if (!fileExists(at: subdir))
+            {
+                do
+                {
+                    try FileManager.default.createDirectory(at: URL(fileURLWithPath: subdir), withIntermediateDirectories: true)
+                }
+                catch
+                {
+                    print("failed to make subdir: \(subdir) \(error)")
+                }
+            }
+
             let mp3url = URL(string:episode.audioURL ?? "title")
             
-            return "\(subdir!)/\(mp3url?.lastPathComponent ?? "media.mp3")"
+            return "\(subdir)/\(mp3url?.lastPathComponent ?? "media.mp3")"
         }
     }
     
@@ -173,4 +184,3 @@ class Utils
         }
     }
 }
-
