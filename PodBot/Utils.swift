@@ -183,4 +183,84 @@ class Utils
                 return 0
         }
     }
+
+    static func formatDurationString(_ duration: String?) -> String?
+    {
+        guard let duration = duration?.trimmingCharacters(in: .whitespacesAndNewlines), !duration.isEmpty else
+        {
+            return nil
+        }
+
+        let seconds = timeStringToSeconds(duration)
+        if seconds > 0
+        {
+            return formatTime(TimeInterval(seconds))
+        }
+
+        if let numericDuration = Int(duration), numericDuration == 0
+        {
+            return formatTime(0)
+        }
+
+        return nil
+    }
+
+    static func formatPublishDate(_ pubDate: String?) -> String
+    {
+        guard let pubDate = pubDate?.trimmingCharacters(in: .whitespacesAndNewlines), !pubDate.isEmpty else
+        {
+            return "date"
+        }
+
+        let outputFormatter = DateFormatter()
+        outputFormatter.locale = Locale(identifier: "en_US_POSIX")
+        outputFormatter.dateFormat = "yyyy-MM-dd"
+
+        let formatters: [DateFormatter] =
+        {
+            let rfc822 = DateFormatter()
+            rfc822.locale = Locale(identifier: "en_US_POSIX")
+            rfc822.dateFormat = "EEE, dd MMM yyyy HH:mm:ss Z"
+
+            let rfc822NoSeconds = DateFormatter()
+            rfc822NoSeconds.locale = Locale(identifier: "en_US_POSIX")
+            rfc822NoSeconds.dateFormat = "EEE, dd MMM yyyy HH:mm Z"
+
+            let iso8601 = DateFormatter()
+            iso8601.locale = Locale(identifier: "en_US_POSIX")
+            iso8601.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+
+            let iso8601Fractional = DateFormatter()
+            iso8601Fractional.locale = Locale(identifier: "en_US_POSIX")
+            iso8601Fractional.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+
+            return [rfc822, rfc822NoSeconds, iso8601, iso8601Fractional]
+        }()
+
+        for formatter in formatters
+        {
+            if let date = formatter.date(from: pubDate)
+            {
+                return outputFormatter.string(from: date)
+            }
+        }
+
+        if let commaIndex = pubDate.firstIndex(of: ",")
+        {
+            let trimmed = pubDate[pubDate.index(after: commaIndex)...].trimmingCharacters(in: .whitespaces)
+            let parts = trimmed.split(separator: " ")
+            if parts.count >= 3
+            {
+                return parts.prefix(3).joined(separator: " ")
+            }
+        }
+
+        let whitespaceParts = pubDate.split(separator: " ")
+        if whitespaceParts.count >= 3
+        {
+            return whitespaceParts.prefix(3).joined(separator: " ")
+        }
+
+        return pubDate
+    }
 }

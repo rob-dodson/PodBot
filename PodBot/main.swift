@@ -376,7 +376,9 @@ private func pickEpisode() async
     
     for (idx, item) in feed.episodes.enumerated()
     {
-        print("\(idx + 1). \(item.title ?? "title") \(item.pubDate ?? "date")")
+        let pubDateText = Utils.formatPublishDate(item.pubDate)
+        let durationText = Utils.formatDurationString(item.duration) ?? "--:--:--"
+        print("\(idx + 1). \(item.title ?? "title") \(pubDateText) [\(durationText)]")
         if (idx >= 10) { break; }
     }
     
@@ -755,6 +757,7 @@ private func resumeSavedEpisode() async
             link: nil,
             pubDate: bookmark.pubDate,
             audioURL: bookmark.audioURL,
+            duration: nil,
             currentPosition: nil,
             state: .Playing
         )

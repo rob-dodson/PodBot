@@ -17,6 +17,7 @@ class PodcastXMLParser: NSObject, XMLParserDelegate
     private var currentItemLink: String?
     private var currentItemPubDate: String?
     private var currentItemAudioURL: String?
+    private var currentItemDuration: String?
     private var accumulatingString: String = ""
     private var inItem: Bool = false
 
@@ -53,6 +54,7 @@ class PodcastXMLParser: NSObject, XMLParserDelegate
             currentItemLink = nil
             currentItemPubDate = nil
             currentItemAudioURL = nil
+            currentItemDuration = nil
         }
         if inItem && currentElement == "link", let href = attributeDict["href"], !href.isEmpty {
             // Atom uses <link href="..."/>
@@ -84,8 +86,10 @@ class PodcastXMLParser: NSObject, XMLParserDelegate
                 if !value.isEmpty { currentItemLink = (currentItemLink ?? "") + value }
             case "pubdate", "updated", "published":
                 if !value.isEmpty { currentItemPubDate = (currentItemPubDate ?? "") + value }
+            case "itunes:duration", "duration":
+                if !value.isEmpty { currentItemDuration = (currentItemDuration ?? "") + value }
             case "item", "entry":
-                    let item = Episode(parent: nil, title: currentItemTitle, link: currentItemLink, pubDate: currentItemPubDate, audioURL: currentItemAudioURL,currentPosition: 0,state: .NotPlayed)
+                    let item = Episode(parent: nil, title: currentItemTitle, link: currentItemLink, pubDate: currentItemPubDate, audioURL: currentItemAudioURL, duration: currentItemDuration, currentPosition: 0, state: .NotPlayed)
                 items.append(item)
                 inItem = false
             default:

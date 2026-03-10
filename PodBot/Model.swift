@@ -65,8 +65,8 @@ struct Episode: Codable
     let link: String?
     let pubDate: String?
     let audioURL: String?
+    let duration: String?
     let currentPosition: Int?
     var state: EpisodeState
 }
-
 
